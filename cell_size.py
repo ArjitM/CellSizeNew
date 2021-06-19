@@ -16,8 +16,6 @@ import os.path
 
 from StackObj import SliceStack, FinalZSlice, ZSlice
 
-sys.setrecursionlimit(10000)
-
 MIN_AREA = 100  # sq pixels
 MAX_AREA = 600
 ROUNDNESS_THRESH = 0.3
@@ -39,7 +37,6 @@ def watershedBoundaries(thresh, img):
     :param img:    Original image
     :return:       Labeled objects detected in image
     """
-    # noise removal
     kernel = np.ones((3, 3), np.uint8)
 
     opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=1)
@@ -225,13 +222,15 @@ def collate(sliceStack, segment=True):
                     overlaps = finalSlice.getOverlaps(otherCellNum, zslice)
                     if len(overlaps) > 1:
                         if segment:
-                            # Remove "finialized cell" and add multiple segmented cells
+                            # Remove "finalized cell" and add multiple segmented cells
                             finalSlice.removeCell(otherCell)
                             for ocell in overlaps:
                                 finalSlice.addCell(zslice.cell(ocell))
                     else:
                         # Since the cells are 1:1 and neither contains the other, retain the larger of the two
-                        contains = cell.area > otherCell.area
+                        if cell.area > otherCell.area:
+                            finalSlice.removeCell(otherCell)
+                            finalSlice.addCell(cell)
 
                 if contains:
                     finalSlice.removeCell(otherCell)
@@ -246,7 +245,6 @@ def collate(sliceStack, segment=True):
                     for cNum in overlaps:
                         finalSlice.removeCell(finalSlice.cell(cNum))
                     finalSlice.addCell(cell)
-                pass
 
     return finalSlice
 
@@ -286,12 +284,6 @@ def overlay(finalZSlice, sliceStack, prefix):
     df.to_excel(prefix + "areas.xlsx")
 
 
-
-parser = argparse.ArgumentParser(description="Local or cluster")
-parser.add_argument('-l', '--local', dest="localRun", default=False, action="store_true")
-args = parser.parse_args()
-
-
 def one_arg(prefix):
     try:
         processStack(prefix)
@@ -323,40 +315,48 @@ def getImageDirectories(locations):
     return prefixes
 
 
-if args.localRun:
+if __name__ == "__main__":
 
-    for p in getImageDirectories(["/Users/arjitmisra/Documents/Kramer_Lab/RAW/RAWcopy/"]):
-        try:
-            processStack(p)
-        except Exception as e:
-            print("Error occured in processing {0}: {1}".format(p, e))
-            logging.error(traceback.format_exc())
-        else:
-            print("Processed: ", p)
-    # processStack("/Users/arjitmisra/Documents/Kramer_Lab/RAW/RAW2excluded/VAF_new_cohort/expt3/nucleus/p3f2_normal/")
-    #
-    # locations = [
-    #     '../vit A/vit_A_free/',
-    #     '../Cell-Size-Project/WT/',
-    #     '../Cell-Size-Project/RD1-P2X7KO/',
-    #     '../Cell-Size-Project/RD1/',
-    #     '../VAF_new_cohort/',
-    #     '../YFP-RA-viruses/'
-    # ]
+    parser = argparse.ArgumentParser(description="Local or cluster")
+    parser.add_argument('-l', '--local', dest="localRun", default=False, action="store_true")
+    args = parser.parse_args()
 
-else:
-    locations = [
-        '/global/scratch/arjitmisra/2-14/vit_A_free/',
-        '/global/scratch/arjitmisra/2-14/WT/',
-        '/global/scratch/arjitmisra/2-14/RD1-P2X7KO/',
-        '/global/scratch/arjitmisra/2-14/RD1/',
-        '/global/scratch/arjitmisra/2-14/VAF_new_cohort/',
-        '/global/scratch/arjitmisra/YFP-RA-viruses/'
-    ]
-    prefixes = getImageDirectories(locations)[args.startIndex:args.endIndex]
-    cpus = multiprocessing.cpu_count()
-    with Pool(cpus * 8) as p:
-        p.map(one_arg, prefixes)
+    if args.localRun:
+
+        prefixes = getImageDirectories(["/Users/arjitmisra/Documents/Kramer_Lab/RAW/RAW2/"])
+        with Pool(2) as p:
+            p.map(one_arg, prefixes)
+        #     try:
+        #         processStack(p)
+        #     except Exception as e:
+        #         print("Error occured in processing {0}: {1}".format(p, e))
+        #         logging.error(traceback.format_exc())
+        #     else:
+        #         print("Processed: ", p)
+        # processStack("/Users/arjitmisra/Documents/Kramer_Lab/RAW/RAW2excluded/VAF_new_cohort/expt3/nucleus/p3f2_normal/")
+        #
+        # locations = [
+        #     '../vit A/vit_A_free/',
+        #     '../Cell-Size-Project/WT/',
+        #     '../Cell-Size-Project/RD1-P2X7KO/',
+        #     '../Cell-Size-Project/RD1/',
+        #     '../VAF_new_cohort/',
+        #     '../YFP-RA-viruses/'
+        # ]
+
+    else:
+        locations = [
+            '/global/scratch/arjitmisra/2-14/vit_A_free/',
+            '/global/scratch/arjitmisra/2-14/WT/',
+            '/global/scratch/arjitmisra/2-14/RD1-P2X7KO/',
+            '/global/scratch/arjitmisra/2-14/RD1/',
+            '/global/scratch/arjitmisra/2-14/VAF_new_cohort/',
+            '/global/scratch/arjitmisra/YFP-RA-viruses/'
+        ]
+        prefixes = getImageDirectories(locations)[args.startIndex:args.endIndex]
+        cpus = multiprocessing.cpu_count()
+        with Pool(cpus * 8) as p:
+            p.map(one_arg, prefixes)
 
 
 

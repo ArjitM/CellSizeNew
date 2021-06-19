@@ -3,13 +3,13 @@ import pandas as pd
 import os
 
 
-loc = "/Users/arjitmisra/Documents/Kramer_Lab/RAW/RAWcopy/"
+loc = "/Users/arjitmisra/Documents/Kramer_Lab/RAW/RAW2/"
 
 conditions = [
-    # 'vit_A_free',
-    # 'WT',
-    # 'RD1-P2X7KO',
-    # 'RD1',
+    'vit_A_free',
+    'WT',
+    'RD1-P2X7KO',
+    'RD1',
     'VAF_new_cohort/contiguous',
     'VAF_new_cohort/reversal',
     'YFP-RA-viruses'
